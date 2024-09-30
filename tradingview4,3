@@ -1,0 +1,147 @@
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.edge.service import Service
+from selenium.webdriver.edge.options import Options
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+import pickle
+import time
+import pandas as pd
+from datetime import datetime
+
+# Set up Selenium WebDriver for Microsoft Edge
+edge_options = Options()
+edge_options.add_argument("--start-maximized")
+
+# Path to your downloaded Microsoft Edge WebDriver
+edge_driver_path = "C:\\Users\\RST\\Downloads\\edgedriver_win64\\msedgedriver.exe"
+service = Service(edge_driver_path)
+
+def create_driver():
+    """Create a new instance of the WebDriver."""
+    driver = webdriver.Edge(service=service, options=edge_options)
+    return driver
+
+def load_cookies(driver, cookies_file):
+    driver.get("https://www.tradingview.com/")
+    with open(cookies_file, "rb") as file:
+        cookies = pickle.load(file)
+        for cookie in cookies:
+            driver.add_cookie(cookie)
+    driver.refresh()
+    print("Cookies have been loaded.")
+
+def validate_date(date_text):
+    try:
+        return datetime.strptime(date_text, "%Y-%m-%d")
+    except ValueError:
+        print("Incorrect date format, should be YYYY-MM-DD")
+        return None
+
+def select_timeframe(driver, wait):
+    try:
+        # Click the interval dropdown
+        interval_button = wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="header-toolbar-intervals"]/button')))
+        interval_button.click()
+        time.sleep(5)
+
+        # Wait for dropdown to open and click on the 5-minute interval
+        five_min_interval = wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@data-value="5"]')))
+        five_min_interval.click()
+        time.sleep(60)
+
+    except Exception as e:
+        print(f"Error selecting timeframe: {e}")
+        driver.quit()
+        raise
+
+def scrape_tradingview_data(start_date, end_date, timeframe):
+    driver = create_driver()
+    wait = WebDriverWait(driver, 60)
+    
+    try:
+        # Load cookies to use pre-logged-in session
+        load_cookies(driver, "cookies.pkl")
+
+        # Navigate to a specific symbol's chart
+        symbol_url = "https://www.tradingview.com/chart/?symbol=NSE:BANKNIFTY"
+        driver.get(symbol_url)
+        time.sleep(10)  # Wait for the chart to load
+
+        # Select the 5-minute timeframe
+        select_timeframe(driver, wait)
+
+        # Wait for data to be loaded
+        time.sleep(30)  # Adjust as needed based on the chart loading time
+
+        # Example: Scrape data based on the chart's data
+        data = {
+            'Date': [],  # Replace with actual scraped dates
+            'Open': [],  # Replace with actual scraped open prices
+            'High': [],  # Replace with actual scraped high prices
+            'Low': [],  # Replace with actual scraped low prices
+            'Close': [],  # Replace with actual scraped close prices
+        }
+
+        # Example extraction of data (You need to adapt this part based on actual chart structure)
+        # The following is a placeholder. You need to locate the elements that contain the required data.
+
+        # Retrieve historical data from TradingView (customize this part)
+        # Example: Extract data from elements
+        # data_elements = driver.find_elements(By.CSS_SELECTOR, '.some-data-class')
+        # for element in data_elements:
+        #     date = element.find_element(By.CSS_SELECTOR, '.date-class').text
+        #     open_price = element.find_element(By.CSS_SELECTOR, '.open-price-class').text
+        #     high_price = element.find_element(By.CSS_SELECTOR, '.high-price-class').text
+        #     low_price = element.find_element(By.CSS_SELECTOR, '.low-price-class').text
+        #     close_price = element.find_element(By.CSS_SELECTOR, '.close-price-class').text
+        #     data['Date'].append(date)
+        #     data['Open'].append(open_price)
+        #     data['High'].append(high_price)
+        #     data['Low'].append(low_price)
+        #     data['Close'].append(close_price)
+
+        # Convert to DataFrame for filtering
+        df = pd.DataFrame(data)
+        
+        # Convert 'Date' column to datetime for easy filtering
+        df['Date'] = pd.to_datetime(df['Date'])
+        
+        # Filter data based on start and end dates
+        filtered_df = df[(df['Date'] >= pd.to_datetime(start_date)) & (df['Date'] <= pd.to_datetime(end_date))]
+
+        # Print the filtered data for the selected timeframe
+        print(f"\nData for timeframe: {timeframe}")
+        print(filtered_df)
+
+    except Exception as e:
+        print(f"Error during scraping: {e}")
+
+    finally:
+        driver.quit()
+
+    return filtered_df
+
+# Main program
+def main():
+    while True:
+        start_date = "2024-09-12"  # Change as needed
+        if validate_date(start_date):
+            break
+    while True:
+        end_date = "2024-09-13"  # Change as needed
+        if validate_date(end_date):
+            break
+    
+    timeframe = "5 minutes"  # Adjust this for different timeframes
+
+    data = scrape_tradingview_data(start_date, end_date, timeframe)
+    
+    save_to_csv = input("\nDo you want to save the data to a CSV file? (yes/no): ")
+    if save_to_csv.lower() == 'yes':
+        filename = f'tradingview_data_{start_date}_to_{end_date}.csv'
+        data.to_csv(filename, index=False)
+        print(f"Data saved to {filename}")
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,3 @@
+NLP-twitter and other news data to form a market sentiment score
+Deep Learning- to analyze live trading volumes
+deep learning- to use indicators and perform trades

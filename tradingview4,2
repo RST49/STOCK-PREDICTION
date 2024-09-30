@@ -1,0 +1,27 @@
+from selenium import webdriver
+from selenium.webdriver.edge.service import Service
+from selenium.webdriver.edge.options import Options
+import pickle
+import time
+
+# Set up Selenium WebDriver for Microsoft Edge
+edge_options = Options()
+edge_options.add_argument("--start-maximized")
+
+# Path to your downloaded Microsoft Edge WebDriver
+edge_driver_path = "C:\\Users\\RST\\Downloads\\edgedriver_win64\\msedgedriver.exe"
+service = Service(edge_driver_path)
+driver = webdriver.Edge(service=service, options=edge_options)
+
+try:
+    # Navigate to TradingView (or any page you want to save cookies from)
+    driver.get("https://www.tradingview.com/")
+    time.sleep(60)  # Ensure the page loads completely
+    
+    # Save cookies
+    with open("cookies.pkl", "wb") as file:
+        pickle.dump(driver.get_cookies(), file)
+    print("Cookies have been saved.")
+
+finally:
+    driver.quit()

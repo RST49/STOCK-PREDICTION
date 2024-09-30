@@ -1,0 +1,92 @@
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.edge.service import Service
+from selenium.webdriver.edge.options import Options
+import time
+import pandas as pd
+from datetime import datetime
+
+# Set up Selenium WebDriver for Microsoft Edge
+edge_options = Options()
+
+# Path to your downloaded Microsoft Edge WebDriver
+edge_driver_path = "C:\\Users\\RST\\Downloads\\edgedriver_win64\\msedgedriver.exe"
+# Initialize WebDriver
+service = Service(edge_driver_path)
+driver = webdriver.Edge(service=service, options=edge_options)
+
+# Function to validate date input
+def validate_date(date_text):
+    try:
+        return datetime.strptime(date_text, "%Y-%m-%d")
+    except ValueError:
+        print("Incorrect date format, should be YYYY-MM-DD")
+        return None
+
+# Main function to scrape data
+def scrape_tradingview_data(start_date, end_date, timeframe):
+    # Open TradingView and log in (automate login if needed)
+    driver.get("https://www.tradingview.com/chart/")
+    time.sleep(5)  # Wait for the page to load
+
+    # Navigate to a specific symbol's chart (replace with your desired symbol's TradingView URL)
+    symbol_url = "https://www.tradingview.com/chart/?symbol=NSE:NIFTY"  # Example for Nifty
+    driver.get(symbol_url)
+    time.sleep(5)  # Wait for the chart to load
+
+    # Example: Scrape data based on the chart's data (you will need to customize this part)
+    # For now, I'm using dummy data to demonstrate the process
+    data = {
+        'Date': ['2023-01-01', '2023-01-02', '2023-01-03', '2023-02-01', '2023-02-02'],
+        'Open': [18000, 18100, 18200, 18300, 18400],
+        'High': [18200, 18300, 18400, 18500, 18600],
+        'Low': [17900, 18000, 18100, 18200, 18300],
+        'Close': [18150, 18250, 18350, 18450, 18550],
+    }
+    
+    # Convert to DataFrame for filtering
+    df = pd.DataFrame(data)
+    
+    # Convert 'Date' column to datetime for easy filtering
+    df['Date'] = pd.to_datetime(df['Date'])
+    
+    # Filter data based on start and end dates
+    filtered_df = df[(df['Date'] >= pd.to_datetime(start_date)) & (df['Date'] <= pd.to_datetime(end_date))]
+
+    # Print the filtered data for the selected timeframe
+    print(f"\nData for timeframe: {timeframe}")
+    print(filtered_df)
+
+    # Close the browser once done
+    driver.quit()
+
+    return filtered_df
+
+# Main program
+def main():
+    # Input the desired start and end date, and timeframe
+    while True:
+        start_date = input("Enter the start date (YYYY-MM-DD): ")
+        if validate_date(start_date):
+            break
+    while True:
+        end_date = input("Enter the end date (YYYY-MM-DD): ")
+        if validate_date(end_date):
+            break
+    
+    # Simulating timeframes like "5 minutes", "1 hour", etc. (this would impact how you scrape the data)
+    timeframe = input("Enter the timeframe (e.g., 5 minutes, 1 hour, etc.): ")
+
+    # Call the function to scrape the data
+    data = scrape_tradingview_data(start_date, end_date, timeframe)
+    
+    # Ask if the user wants to save the data to a CSV file
+    save_to_csv = input("\nDo you want to save the data to a CSV file? (yes/no): ")
+    if save_to_csv.lower() == 'yes':
+        filename = f'tradingview_data_{start_date}_to_{end_date}.csv'
+        data.to_csv(filename, index=False)
+        print(f"Data saved to {filename}")
+
+# Execute the main program
+if __name__ == "__main__":
+    main()

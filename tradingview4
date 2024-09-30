@@ -1,0 +1,149 @@
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.edge.service import Service
+from selenium.webdriver.edge.options import Options
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+import time
+import pandas as pd
+from datetime import datetime
+
+# Set up Selenium WebDriver for Microsoft Edge
+edge_options = Options()
+edge_options.add_argument("--start-maximized")
+
+# Path to your downloaded Microsoft Edge WebDriver
+edge_driver_path = "C:\\Users\\RST\\Downloads\\edgedriver_win64\\msedgedriver.exe"
+service = Service(edge_driver_path)
+driver = webdriver.Edge(service=service, options=edge_options)
+
+# Function to validate date input
+def validate_date(date_text):
+    try:
+        return datetime.strptime(date_text, "%Y-%m-%d")
+    except ValueError:
+        print("Incorrect date format, should be YYYY-MM-DD")
+        return None
+
+# Function to log into TradingView
+def login_tradingview(driver, wait, username, password):
+    driver.get("https://www.tradingview.com/")
+    print("Navigated to TradingView")
+    time.sleep(5)  # Wait for the page to load
+
+    try:
+        # Click on the login button
+        login_button = wait.until(EC.element_to_be_clickable((By.XPATH, '//*[contains(text(), "Log in")]')))
+        print("Login button found")
+        login_button.click()
+        time.sleep(3)
+        
+        # Click on the sign-in option (if applicable)
+        signin_option = wait.until(EC.element_to_be_clickable((By.XPATH, '//button[contains(text(), "Sign in")]')))
+        print("Sign in option found")
+        signin_option.click()
+        time.sleep(3)
+
+        # Click on the email option (if applicable)
+        email_option = wait.until(EC.element_to_be_clickable((By.XPATH, '//button[contains(text(), "Email")]')))
+        print("Email option found")
+        email_option.click()
+        time.sleep(3)
+
+        # Enter username and password
+        email_input = wait.until(EC.element_to_be_clickable((By.NAME, 'username')))
+        password_input = driver.find_element(By.NAME, 'password')
+        email_input.send_keys(username)
+        password_input.send_keys(password)
+        print("Entered credentials")
+
+        # Click on the submit button
+        submit_button = driver.find_element(By.XPATH, '//button[@type="submit"]')
+        submit_button.click()
+        print("Clicked submit button")
+        time.sleep(10)  # Wait for the login to complete
+
+    except Exception as e:
+        print(f"Error during login: {e}")
+        driver.quit()
+        raise
+
+# Function to choose 5-minute interval in TradingView
+def select_timeframe(driver, wait):
+    # Click the interval dropdown
+    interval_button = wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="header-toolbar-intervals"]/button')))
+    interval_button.click()
+    time.sleep(5)
+
+    # Wait for dropdown to open and click on the 5-minute interval
+    five_min_interval = wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@data-value="5"]')))
+    five_min_interval.click()
+    time.sleep(60)
+
+# Main function to scrape data
+def scrape_tradingview_data(start_date, end_date, timeframe, username, password):
+    wait = WebDriverWait(driver, 60)
+    login_tradingview(driver, wait, username, password)
+
+    # Navigate to a specific symbol's chart
+    symbol_url = "https://www.tradingview.com/chart/?symbol=NSE:BANKNIFTY"
+    driver.get(symbol_url)
+    time.sleep(10)  # Wait for the chart to load
+
+    # Select the 5-minute timeframe
+    select_timeframe(driver, wait)
+
+    # Example: Scrape data based on the chart's data
+    data = {
+        'Date': [],  # Replace with actual scraped dates
+        'Open': [],  # Replace with actual scraped open prices
+        'High': [],  # Replace with actual scraped high prices
+        'Low': [],  # Replace with actual scraped low prices
+        'Close': [],  # Replace with actual scraped close prices
+    }
+    
+    # Convert to DataFrame for filtering
+    df = pd.DataFrame(data)
+    
+    # Convert 'Date' column to datetime for easy filtering
+    df['Date'] = pd.to_datetime(df['Date'])
+    
+    # Filter data based on start and end dates
+    filtered_df = df[(df['Date'] >= pd.to_datetime(start_date)) & (df['Date'] <= pd.to_datetime(end_date))]
+
+    # Print the filtered data for the selected timeframe
+    print(f"\nData for timeframe: {timeframe}")
+    print(filtered_df)
+
+    # Close the browser once done
+    driver.quit()
+
+    return filtered_df
+
+# Main program
+def main():
+    while True:
+        start_date = "2024-07-01"  # Change as needed
+        if validate_date(start_date):
+            break
+    while True:
+        end_date = "2024-08-30"  # Change as needed
+        if validate_date(end_date):
+            break
+    
+    timeframe = "5 minutes"  # Adjust this for different timeframes
+
+    # Input TradingView login credentials
+    username = input("Enter your TradingView username: ")
+    password = input("Enter your TradingView password: ")
+
+    data = scrape_tradingview_data(start_date, end_date, timeframe, username, password)
+    
+    save_to_csv = input("\nDo you want to save the data to a CSV file? (yes/no): ")
+    if save_to_csv.lower() == 'yes':
+        filename = f'tradingview_data_{start_date}_to_{end_date}.csv'
+        data.to_csv(filename, index=False)
+        print(f"Data saved to {filename}")
+
+if __name__ == "__main__":
+    main()
